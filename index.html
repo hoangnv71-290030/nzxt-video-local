@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NZXT Local Video Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            width: 640px;
+            height: 640px;
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background: linear-gradient(45deg, #1a1a1a, #2a2a2a);
+            border: 2px solid #333;
+        }
+
+        /* Configuration Browser Styles */
+        .config-container {
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .config-header {
+            text-align: center;
+            margin-bottom: 24px;
+            color: #4CAF50;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .config-section {
+            background: linear-gradient(135deg, #2d2d2d, #3d3d3d);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid #444;
+        }
+
+        .section-title {
+            color: #4CAF50;
+            font-size: 14px;
+            margin-bottom: 12px;
+            font-weight: bold;
+        }
+
+        .folder-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .folder-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .folder-button:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+
+        .folder-path {
+            background: #1a1a1a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #ccc;
+            word-break: break-all;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .folder-path.empty {
+            color: #666;
+            font-style: italic;
+        }
+
+        .video-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #1a1a1a;
+        }
+
+        .video-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .video-list::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .video-list::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 3px;
+        }
+
+        .video-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .video-item:hover {
+            background: #333;
+        }
+
+        .video-item.active {
+            background: #2d4d2d;
+            color: #4CAF50;
+        }
+
+        .video-icon {
+            margin-right: 10px;
+            color: #4CAF50;
+            font-size: 16px;
+        }
+
+        .video-info {
+            flex: 1;
+        }
+
+        .video-name {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .video-size {
+            font-size: 10px;
+            color: #888;
+        }
+
+        .status {
+            text-align: center;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 12px;
+            font-size: 12px;
+        }
+
+        .status.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .status.error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+
+        .status.info {
+            background: rgba(33, 150, 243, 0.2);
+            color: #2196F3;
+        }
+
+        /* Kraken Browser Styles */
+        .kraken-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #videoPlayer {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #4CAF50;
+            font-size: 16px;
+        }
+
+        .spinner {
+            border: 3px solid #333;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            text-align: center;
+            color: #f44336;
+            font-size: 14px;
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .refresh-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+        }
+
+        .refresh-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <!-- Configuration Browser View -->
+        <div class="config-container" id="configContainer">
+            <div class="config-header">🎬 Local Video Player</div>
+            
+            <div class="config-section">
+                <div class="section-title">📁 Select Video Folder</div>
+                <div class="folder-selector">
+                    <button class="folder-button" onclick="selectFolder()">
+                        <span>📂</span>
+                        <span>Choose Video Folder</span>
+                    </button>
+                    <div class="folder-path empty" id="folderPath">
+                        No folder selected
+                    </div>
+                </div>
+                <input type="file" id="folderInput" webkitdirectory multiple accept="video/*">
+            </div>
+
+            <div class="config-section hidden" id="videoSection">
+                <div class="section-title">🎥 Select Video to Play</div>
+                <div class="video-list" id="videoList">
+                    <!-- Videos will be loaded here -->
+                </div>
+                <button class="refresh-btn" onclick="selectFolder()">
+                    🔄 Change Folder
+                </button>
+            </div>
+
+            <div id="status" class="status" style="display: none;"></div>
+        </div>
+
+        <!-- Kraken Browser View -->
+        <div class="kraken-container" id="krakenContainer" style="display: none;">
+            <video id="videoPlayer" autoplay loop muted></video>
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+                <div>Loading video...</div>
+            </div>
+            <div class="error-message" id="errorMessage" style="display: none;">
+                No video selected. Please configure in NZXT CAM settings.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if we're in Kraken browser or Configuration browser
+        const searchParams = new URLSearchParams(window.location.search);
+        const isKraken = searchParams.get("kraken") === "1";
+
+        const configContainer = document.getElementById('configContainer');
+        const krakenContainer = document.getElementById('krakenContainer');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const errorMessage = document.getElementById('errorMessage');
+        const folderInput = document.getElementById('folderInput');
+
+        // Storage keys
+        const STORAGE_KEYS = {
+            SELECTED_VIDEO: 'nzxt_selected_video',
+            FOLDER_PATH: 'nzxt_folder_path',
+            VIDEOS_LIST: 'nzxt_videos_list'
+        };
+
+        let currentVideos = [];
+
+        if (isKraken) {
+            // Kraken Browser - Display video
+            showKrakenView();
+        } else {
+            // Configuration Browser - Show settings
+            showConfigView();
+        }
+
+        function showKrakenView() {
+            configContainer.style.display = 'none';
+            krakenContainer.style.display = 'flex';
+            
+            // Load saved settings and play video
+            loadAndPlayVideo();
+            
+            // Listen for settings changes from Configuration Browser
+            window.addEventListener('storage', (event) => {
+                if (event.key === STORAGE_KEYS.SELECTED_VIDEO) {
+                    loadAndPlayVideo();
+                }
+            });
+        }
+
+        function showConfigView() {
+            krakenContainer.style.display = 'none';
+            configContainer.style.display = 'block';
+            
+            // Load saved settings
+            loadSavedSettings();
+        }
+
+        function loadSavedSettings() {
+            const folderPath = localStorage.getItem(STORAGE_KEYS.FOLDER_PATH);
+            const videosListData = localStorage.getItem(STORAGE_KEYS.VIDEOS_LIST);
+            
+            if (folderPath && videosListData) {
+                try {
+                    currentVideos = JSON.parse(videosListData);
+                    displayFolderPath(folderPath);
+                    displayVideoList(currentVideos);
+                    showStatus(`Loaded ${currentVideos.length} videos from: ${folderPath}`, 'info');
+                } catch (e) {
+                    console.error('Error loading saved data:', e);
+                }
+            }
+        }
+
+        function selectFolder() {
+            folderInput.click();
+        }
+
+        // Handle folder selection
+        folderInput.addEventListener('change', function(event) {
+            const files = Array.from(event.target.files);
+            
+            if (files.length === 0) {
+                showStatus('No files selected', 'error');
+                return;
+            }
+            
+            // Filter video files
+            const videoFiles = files.filter(file => {
+                const isVideo = file.type.startsWith('video/');
+                const hasVideoExt = /\.(mp4|webm|mov|avi|mkv|m4v)$/i.test(file.name);
+                return isVideo || hasVideoExt;
+            });
+            
+            if (videoFiles.length === 0) {
+                showStatus('No video files found in selected folder', 'error');
+                return;
+            }
+            
+            // Get folder path (from first file)
+            const folderPath = files[0].webkitRelativePath.split('/')[0];
+            
+            // Process video files
+            currentVideos = videoFiles.map(file => ({
+                name: file.name,
+                file: file,
+                size: formatFileSize(file.size),
+                path: file.webkitRelativePath
+            }));
+            
+            // Sort by name
+            currentVideos.sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Save data
+            localStorage.setItem(STORAGE_KEYS.FOLDER_PATH, folderPath);
+            localStorage.setItem(STORAGE_KEYS.VIDEOS_LIST, JSON.stringify(
+                currentVideos.map(v => ({
+                    name: v.name,
+                    size: v.size,
+                    path: v.path
+                }))
+            ));
+            
+            // Display results
+            displayFolderPath(folderPath);
+            displayVideoList(currentVideos);
+            showStatus(`Found ${videoFiles.length} videos in folder: ${folderPath}`, 'success');
+        });
+
+        function displayFolderPath(path) {
+            const folderPathElement = document.getElementById('folderPath');
+            folderPathElement.textContent = path;
+            folderPathElement.classList.remove('empty');
+        }
+
+        function displayVideoList(videos) {
+            const videoList = document.getElementById('videoList');
+            const selectedVideoData = localStorage.getItem(STORAGE_KEYS.SELECTED_VIDEO);
+            let selectedVideoName = null;
+            
+            if (selectedVideoData) {
+                try {
+                    selectedVideoName = JSON.parse(selectedVideoData).name;
+                } catch (e) {
+                    // Invalid data, ignore
+                }
+            }
+            
+            videoList.innerHTML = '';
+            
+            videos.forEach(video => {
+                const videoItem = document.createElement('div');
+                videoItem.className = 'video-item';
+                if (video.name === selectedVideoName) {
+                    videoItem.classList.add('active');
+                }
+                
+                videoItem.innerHTML = `
+                    <span class="video-icon">🎥</span>
+                    <div class="video-info">
+                        <div class="video-name">${video.name}</div>
+                        <div class="video-size">${video.size || 'Unknown size'}</div>
+                    </div>
+                `;
+                
+                videoItem.onclick = () => selectVideo(video, videoItem);
+                videoList.appendChild(videoItem);
+            });
+            
+            document.getElementById('videoSection').classList.remove('hidden');
+        }
+
+        function selectVideo(video, element) {
+            // Update UI
+            document.querySelectorAll('.video-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+            
+            // Create video URL from file
+            let videoURL;
+            if (video.file) {
+                videoURL = URL.createObjectURL(video.file);
+            } else {
+                // For saved videos, we need to find the file again
+                const matchingVideo = currentVideos.find(v => v.name === video.name);
+                if (matchingVideo && matchingVideo.file) {
+                    videoURL = URL.createObjectURL(matchingVideo.file);
+                } else {
+                    showStatus('Video file not found. Please reselect folder.', 'error');
+                    return;
+                }
+            }
+            
+            const videoData = {
+                name: video.name,
+                url: videoURL,
+                size: video.size
+            };
+            
+            // Save selection and trigger storage event for Kraken Browser
+            localStorage.setItem(STORAGE_KEYS.SELECTED_VIDEO, JSON.stringify(videoData));
+            
+            showStatus(`Selected: ${video.name}`, 'success');
+        }
+
+        function loadAndPlayVideo() {
+            const selectedVideoData = localStorage.getItem(STORAGE_KEYS.SELECTED_VIDEO);
+            
+            if (!selectedVideoData) {
+                showError('Please select a video in settings');
+                return;
+            }
+            
+            try {
+                const videoData = JSON.parse(selectedVideoData);
+                const videoURL = videoData.url;
+                
+                loadingOverlay.style.display = 'flex';
+                errorMessage.style.display = 'none';
+                
+                videoPlayer.src = videoURL;
+                videoPlayer.onloadeddata = () => {
+                    loadingOverlay.style.display = 'none';
+                };
+
+                videoPlayer.onerror = (e) => {
+                    console.error('Video load error:', e);
+                    showError('Error loading video. Video file may have been moved or deleted.');
+                };
+                
+            } catch (error) {
+                showError('Invalid video data. Please reconfigure in settings.');
+            }
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function showError(message) {
+            loadingOverlay.style.display = 'none';
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Video ended handler
+        videoPlayer.addEventListener('ended', () => {
+            videoPlayer.currentTime = 0;
+            videoPlayer.play();
+        });
+
+        // Clean up object URLs to prevent memory leaks
+        videoPlayer.addEventListener('loadstart', () => {
+            // Clean up previous object URL if exists
+            if (videoPlayer.src && videoPlayer.src.startsWith('blob:')) {
+                // Note: We keep the URL active while video is playing
+            }
+        });
+    </script>
+</body>
+</html>
